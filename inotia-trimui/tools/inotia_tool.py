@@ -483,6 +483,7 @@ def apk_overview(path):
                 head = fh.read(16)
             sniff.append({"file": i.filename, "size": i.file_size, "magic": sniff_magic(head)})
         inv["largest_files"] = sniff
+        inv["compressed_entries"] = sum(1 for i in assets if i.compress_type != zipfile.ZIP_STORED and not i.is_dir())
         o["assets"] = inv
     return o
 
@@ -537,6 +538,9 @@ def recommend(report):
         return {"route": "none", "detail": "no native libraries found (Java-only app, or wrong input)"}
     # Prefer: ARMv5/6 Thumb-1 lib (interpreter as-is) > arm64 (native loader) > armv7
     best = None
+    libs = [l for l in libs if "verdict" in l]
+    if not libs:
+        return {"route": "none", "detail": "native libraries present but none could be parsed as ELF"}
     for l in libs:
         v = l.get("verdict", {})
         score = {"interpreter": 2, "native-loader": 1}.get(v.get("route"), 0)
@@ -562,6 +566,9 @@ def print_summary(report):
     if inv:
         print("assets     : %d files, %.1f MB" % (inv["files"], inv["bytes"] / 1e6))
         print("  by ext   :", ", ".join("%s=%d" % (k, v["files"]) for k, v in list(inv["by_extension"].items())[:12]))
+        if inv.get("compressed_entries"):
+            print("  WARNING  : %d asset entries are DEFLATE-compressed (repacked APK). The engine needs STORED"
+                  " entries; `prepare` rewrites assets.apk accordingly." % inv["compressed_entries"])
     for l in report["native_libs"]:
         print("\n== %s (%d bytes) ==" % (l["file"], l["size"]))
         if "error" in l:
@@ -678,9 +685,30 @@ def cmd_prepare(args):
             print("%s -> route=%s effort=%s" % (pick, v.get("route"), v.get("effort")))
         with open(os.path.join(args.portdir, "libgame.so"), "wb") as fh:
             fh.write(blob)
-    import shutil
-    shutil.copyfile(args.apk, os.path.join(args.portdir, "assets.apk"))
-    print("wrote %s/libgame.so and %s/assets.apk" % (args.portdir, args.portdir))
+    # assets.apk: the engine reads resources at byte offsets inside the archive
+    # (Android's openFd() model), which only works for STORED entries. A stock
+    # APK has them stored; a repacked/re-signed one is often re-deflated, so
+    # rewrite the archive with every assets/ entry stored.
+    out = os.path.join(args.portdir, "assets.apk")
+    with zipfile.ZipFile(args.apk) as zin:
+        deflated = [i for i in zin.infolist() if i.filename.startswith("assets/") and i.compress_type != zipfile.ZIP_STORED and not i.is_dir()]
+        if not deflated and not args.force_repack:
+            import shutil
+            shutil.copyfile(args.apk, out)
+            print("assets already stored: copied the APK unchanged")
+        else:
+            print("repacking: %d compressed asset entries -> stored" % len(deflated))
+            with zipfile.ZipFile(out + ".tmp", "w") as zout:
+                for i in zin.infolist():
+                    if i.is_dir():
+                        continue
+                    data = zin.read(i)
+                    ni = zipfile.ZipInfo(i.filename, date_time=i.date_time)
+                    ni.external_attr = i.external_attr
+                    ni.compress_type = zipfile.ZIP_STORED if i.filename.startswith("assets/") else zipfile.ZIP_DEFLATED
+                    zout.writestr(ni, data)
+            os.replace(out + ".tmp", out)
+    print("wrote %s/libgame.so and %s" % (args.portdir, out))
     return 0
 
 
@@ -712,7 +740,7 @@ def main(argv=None):
     s = sub.add_parser("inspect"); s.add_argument("input"); s.add_argument("--json"); s.set_defaults(fn=cmd_inspect)
     s = sub.add_parser("symbols"); s.add_argument("input"); s.add_argument("--grep"); s.add_argument("--out"); s.set_defaults(fn=cmd_symbols)
     s = sub.add_parser("assets"); s.add_argument("apk"); s.add_argument("--list", action="store_true"); s.add_argument("--extract"); s.set_defaults(fn=cmd_assets)
-    s = sub.add_parser("prepare"); s.add_argument("apk"); s.add_argument("portdir"); s.set_defaults(fn=cmd_prepare)
+    s = sub.add_parser("prepare"); s.add_argument("apk"); s.add_argument("portdir"); s.add_argument("--force-repack", action="store_true", help="always rewrite assets.apk with assets stored"); s.set_defaults(fn=cmd_prepare)
     s = sub.add_parser("modgen"); s.add_argument("input"); s.add_argument("--grep", required=True); s.add_argument("--out"); s.set_defaults(fn=cmd_modgen)
     args = p.parse_args(argv)
     return args.fn(args)
