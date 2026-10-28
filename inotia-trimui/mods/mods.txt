@@ -17,3 +17,17 @@
 #trace GAMESTATE_SetState 100
 #nop   excuteDirectly          # already done by the port's built-in patches
 #fps   33                      # 2x game speed -- measurement only
+
+# --- Hide the on-screen virtual pad (d-pad art, attack button, skill circles,
+# pause icon). These VP_Draw* callbacks only issue draw calls (the Vita port
+# read them in full), so returning early is purely visual: the HUD positions
+# stay touchable and the physical-button mapping keeps working. Caveat: the
+# item/potion quick-slot circles are drawn by VP_DrawObj_Skill too, so you
+# lose the view of what is in L1/R1/L2 while this is on. Symbol names are
+# from libgame.so v1.3.2; a missing name is skipped with a log line.
+#nop VP_DrawObj_Skill
+#nop VP_DrawObjectAni_Pad
+#nop VP_DrawObjectBack_Pad
+#nop VP_DrawObjectAni_Pad_Fire
+#nop VP_DrawObjectBack_PadFire
+#nop VP_DrawObjectBack_Nenu

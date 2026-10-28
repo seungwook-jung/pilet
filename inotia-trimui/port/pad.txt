@@ -10,6 +10,8 @@
 #   LEFTSTICK  cursor|dpad|none
 #   RIGHTSTICK cursor|dpad|none
 #   cursor_speed <px per second>
+#   ui_nav on|off            d-pad walks the screen's real touch widgets, A taps the selected one
+#   ui_scale <sx> <sy>       widget space (480x320) -> touch space (960x544)
 
 A          tap 880 470     # attack / confirm
 B          tap 917 365     # skill 1
@@ -29,3 +31,5 @@ L3         none            # platform default: L3 clicks the pointer
 LEFTSTICK  cursor          # Smart Pro; ignored on the Brick (no sticks)
 RIGHTSTICK none
 cursor_speed 900
+ui_nav     on
+ui_scale   2.0 1.7

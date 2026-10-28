@@ -31,8 +31,13 @@ The game is touch-only. Every button is a finger on the on-screen HUD:
     R2               click at the pointer
     SELECT + START   quit
 
-Menus are touch menus: hold SELECT, move the pointer with the d-pad, press A.
-On a Smart Pro the left stick moves the pointer, L3 clicks.
+Menus: on screens that register touch widgets with the engine (title, save
+slots, most menus) the d-pad moves a highlight between the real widgets and
+A taps the selected one -- no pointer needed. On the few screens that do
+not (shop, skill equip, settings), hold SELECT, move the pointer with the
+d-pad, press A. On a Smart Pro / Brick Pro the left stick moves the pointer,
+L3 clicks. mods.txt has a commented block that hides the on-screen virtual
+pad graphics (the physical buttons keep working).
 
 Settings
 --------

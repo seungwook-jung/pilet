@@ -1,19 +1,29 @@
 /*
- * pad_map.h -- gamepad -> engine touch mapping for handhelds without a
- * touchscreen (TrimUI Brick: d-pad, A/B/X/Y, L1/L2/R1/R2, Start/Select, no
- * analog sticks). The engine is touch-only, so every button becomes a
- * synthetic finger held at a fixed position of the engine's 960x544 HUD; the
- * positions come from the PS Vita port's wr_touch.c table.
+ * pad_map.h -- gamepad -> engine input for handhelds without a touchscreen
+ * (TrimUI Brick / Brick Hammer: d-pad, A/B/X/Y, L1/L2/R1/R2, Start/Select,
+ * no analog sticks). The engine is touch-only, so:
+ *
+ *   * in the field, every button is a synthetic finger held at a fixed
+ *     position of the engine's 960x544 HUD (the PS Vita port's table);
+ *   * on screens that register touch widgets in the engine's own
+ *     UI_listControl (title, save slots, most menus), the d-pad moves a
+ *     highlighted selection between the real widgets and A taps the
+ *     selected one -- no pointer, no virtual pad;
+ *   * SELECT held is a fallback cursor mode for the few screens that
+ *     hit-test ad hoc (shop, skill equip, settings): d-pad moves a pointer,
+ *     A clicks.
  *
  * pad.txt (next to the binary) overrides the built-in table:
  *
  *   A         tap 880 470        # engine content coordinates (960x544)
  *   DPAD_UP   tap 140 341
  *   SELECT    modifier           # held: d-pad moves the cursor, A clicks
- *   LEFTSTICK cursor|dpad|none   # stick behaviour (Smart Pro has sticks)
+ *   LEFTSTICK cursor|dpad|none   # stick behaviour (Smart Pro / Brick Pro)
  *   RIGHTSTICK cursor|dpad|none
  *   L3        click|none
  *   cursor_speed 900             # content px/s in cursor mode
+ *   ui_nav    on|off             # d-pad navigation of UI_listControl widgets
+ *   ui_scale  2.0 1.7            # widget space (480x320) -> touch space (960x544)
  *
  * Button names: A B X Y BACK/SELECT START GUIDE/MENU L1 R1 L2 R2 L3 R3
  * DPAD_UP DPAD_DOWN DPAD_LEFT DPAD_RIGHT. SDL's A is the *south* button.
@@ -31,16 +41,21 @@ void pad_map_init(const char *path);
  * the button had a mapping. `now_ms` is host_now()*1000. */
 int pad_map_button(int sdl_button, int down, double now_ms);
 
-/* Per-tick work: stick-as-dpad, cursor movement in modifier mode, auto
- * release. `pad` may be NULL. */
+/* Per-tick work: stick-as-dpad, cursor movement in modifier mode, trigger
+ * edges, menu-mode transitions. `pad` may be NULL. */
 void pad_map_tick(SDL_GameController *pad, double dt_ms, double now_ms);
+
+/* Draw the selection highlight when UI navigation is active. Called from the
+ * present path, before the cursor. */
+void pad_map_draw(void);
 
 /* 1 when the left stick is NOT the cursor (so platform_sdl's own cursor
  * nudge must stay out of the way). */
 int pad_map_stick_is_dpad(void);
 
-/* Supplied by platform_sdl.c (the cursor lives there). */
+/* Supplied by platform_sdl.c (the cursor and the GL helpers live there). */
 void host_sdl_cursor_move(float dx, float dy);
 void host_sdl_cursor_click(int down);
+void host_sdl_fill_content_rect(int x, int y, int w, int h, float r, float g, float b);
 
 #endif /* PAD_MAP_H */

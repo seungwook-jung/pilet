@@ -60,6 +60,9 @@ def main():
              marker='#include "mods.h"'):
         patch(main_c, "patches_apply(&g_img);", 'mods_load("mods.txt");\npatches_apply(&g_img);')
         patch(main_c, "patches_fill_vm_caches(&g_img);", "patches_fill_vm_caches(&g_img);\nmods_apply(&g_img);")
+        patch(main_c, "static guest_image g_img;\n",
+              "static guest_image g_img;\n/* overlay: pad_map.c reads UI_listControl through this. */\n"
+              "const guest_image *spike_image(void) { return &g_img; }\n")
         print("  patched main.c")
 
     # 3. cpu.c: trace hook next to the one-shot stop-at check
@@ -82,6 +85,24 @@ def main():
               "    cursor_nudge(dt_ms);\n    pad_map_tick(g_pad, dt_ms, now);\n    cursor_hide_if_idle();")
         patch(sdl_c, "    if (!g_pad)\n        return;\n    Sint16 ax = SDL_GameControllerGetAxis(g_pad, SDL_CONTROLLER_AXIS_LEFTX);",
               "    if (!g_pad)\n        return;\n    if (pad_map_stick_is_dpad())\n        return;\n    Sint16 ax = SDL_GameControllerGetAxis(g_pad, SDL_CONTROLLER_AXIS_LEFTX);")
+        patch(sdl_c, "    cursor_draw();\n", "    pad_map_draw();\n    cursor_draw();\n")
+        patch(sdl_c, "static void cursor_draw(void)\n",
+              "/* pad_map.c: a filled rectangle in content coordinates (960x544), drawn\n"
+              " * through the driver the way the cursor is (scissor + clear). */\n"
+              "void host_sdl_fill_content_rect(int x, int y, int w, int h, float r, float g, float b)\n{\n"
+              "    if (!g_gl_inited)\n        return;\n"
+              "    if (!cg.ok && !cursor_gfx_init())\n        return;\n"
+              "    int lx, ly, lw, lh;\n    content_target(&lx, &ly, &lw, &lh);\n"
+              "    float sx = (float)lw / CONTENT_W, sy = (float)lh / CONTENT_H;\n"
+              "    if (sx <= 0.0f || sy <= 0.0f)\n        return;\n"
+              "    cg.BindFramebuffer(0x8D40 /* GL_FRAMEBUFFER */, 0);\n"
+              "    cg.Viewport(0, 0, g_surface_w, g_surface_h);\n"
+              "    cg.Disable(0x0C11 /* GL_SCISSOR_TEST */);\n"
+              "    cg.ColorMask(1, 1, 1, 1);\n"
+              "    cg.Enable(0x0C11 /* GL_SCISSOR_TEST */);\n"
+              "    gl_rect(lx + (int)(x * sx), ly + (int)(y * sy), (int)(w * sx) + 1, (int)(h * sy) + 1, r, g, b);\n"
+              "    cg.Disable(0x0C11 /* GL_SCISSOR_TEST */);\n}\n\n"
+              "static void cursor_draw(void)\n")
         patch(sdl_c, "/* Window pixels -> content coordinates. */",
               "/* Cursor helpers for pad_map.c (the cursor is private to this file). */\n"
               "void host_sdl_cursor_move(float dx, float dy)\n{\n"
