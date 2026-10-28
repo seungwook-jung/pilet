@@ -1,0 +1,19 @@
+# mods.txt -- game modifications applied when the engine loads libgame.so.
+# Everything is commented out by default: the stock game runs unmodified.
+#
+# Directives (see docs/modding.md):
+#   ret   <symbol|0xaddr> <int>      function returns <int> immediately
+#   nop   <symbol|0xaddr>            function returns 0 immediately
+#   poke  <symbol|0xaddr>[+off] u8|u16|u32|f32 <value>
+#   trace <symbol|0xaddr> [max]      log calls (r0-r3, lr); reverse engineering aid
+#   fps   <ms>                       frame period, 66 = stock (changes game speed)
+#
+# Symbol names: `python3 tools/inotia_tool.py symbols your.apk --grep REGEX`.
+# Com2uS left the dynamic symbol table un-stripped, so engine functions have
+# their real names (SAVE_*, GAMESTATE_*, APPINFO_*, UI_*, GRP_*, SOUND* ...).
+#
+# Examples (names must be verified against YOUR libgame.so first):
+#trace SAVE_SaveData 20
+#trace GAMESTATE_SetState 100
+#nop   excuteDirectly          # already done by the port's built-in patches
+#fps   33                      # 2x game speed -- measurement only

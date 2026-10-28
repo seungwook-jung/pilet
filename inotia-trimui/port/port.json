@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "name": "Inotia3",
+  "items": [
+    {
+      "name": "Inotia 3: Children of Carnia",
+      "desc": "The Android ARPG (Com2uS, 2010) running its original libgame.so under an ARM interpreter, GLES1 via gl4es, SDL2 host. Supply your own APK (v1.3.2).",
+      "author": "TrimUI package: inotia-trimui; engine: suchangv/Inotia3-wasm; reverse engineering: MetalSyntax/Inotia3-vita",
+      "version": "0.1",
+      "runtime": "",
+      "porter": "inotia-trimui",
+      "reqs": "libgame.so + assets.apk from your own APK",
+      "files": "libgame.so assets.apk",
+      "arch": ["aarch64"],
+      "genres": ["rpg", "action"]
+    }
+  ]
+}

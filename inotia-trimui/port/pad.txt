@@ -1,0 +1,31 @@
+# Gamepad -> on-screen HUD mapping. Coordinates are in the engine's 960x544
+# space (the PS Vita port's wr_touch.c table). SDL names: A = south button,
+# B = east, X = west, Y = north (the TrimUI Brick's physical labels are the
+# Nintendo layout, so SDL "A" is the button labelled B on the shell).
+#
+#   <button> tap <x> <y>     press = finger down at x,y; release = finger up
+#   <button> modifier        while held: d-pad moves the pointer, A clicks
+#   <button> click           press/release the pointer's finger
+#   <button> none
+#   LEFTSTICK  cursor|dpad|none
+#   RIGHTSTICK cursor|dpad|none
+#   cursor_speed <px per second>
+
+A          tap 880 470     # attack / confirm
+B          tap 917 365     # skill 1
+X          tap 757 427     # skill 2
+Y          tap 827 365     # item / shield
+DPAD_UP    tap 140 341
+DPAD_DOWN  tap 145 507
+DPAD_LEFT  tap  42 417
+DPAD_RIGHT tap 245 417
+L1         tap 540 499     # quick slot 1
+R1         tap 640 499     # quick slot 2
+L2         tap 735 499     # quick slot 3
+START      tap  42 272     # pause
+SELECT     modifier        # hold for cursor mode (menus)
+R2         click
+L3         none            # platform default: L3 clicks the pointer
+LEFTSTICK  cursor          # Smart Pro; ignored on the Brick (no sticks)
+RIGHTSTICK none
+cursor_speed 900
