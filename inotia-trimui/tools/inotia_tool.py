@@ -686,28 +686,22 @@ def cmd_prepare(args):
         with open(os.path.join(args.portdir, "libgame.so"), "wb") as fh:
             fh.write(blob)
     # assets.apk: the engine reads resources at byte offsets inside the archive
-    # (Android's openFd() model), which only works for STORED entries. A stock
-    # APK has them stored; a repacked/re-signed one is often re-deflated, so
-    # rewrite the archive with every assets/ entry stored.
+    # (Android's openFd() model), which only works for STORED entries, and it
+    # only ever asks for assets/ -- so the archive written here holds exactly
+    # the assets/ entries, stored. No dex, no signature, no resources: nothing
+    # the port does not need (and nothing a modded APK's Java side changed).
     out = os.path.join(args.portdir, "assets.apk")
     with zipfile.ZipFile(args.apk) as zin:
-        deflated = [i for i in zin.infolist() if i.filename.startswith("assets/") and i.compress_type != zipfile.ZIP_STORED and not i.is_dir()]
-        if not deflated and not args.force_repack:
-            import shutil
-            shutil.copyfile(args.apk, out)
-            print("assets already stored: copied the APK unchanged")
-        else:
-            print("repacking: %d compressed asset entries -> stored" % len(deflated))
-            with zipfile.ZipFile(out + ".tmp", "w") as zout:
-                for i in zin.infolist():
-                    if i.is_dir():
-                        continue
-                    data = zin.read(i)
-                    ni = zipfile.ZipInfo(i.filename, date_time=i.date_time)
-                    ni.external_attr = i.external_attr
-                    ni.compress_type = zipfile.ZIP_STORED if i.filename.startswith("assets/") else zipfile.ZIP_DEFLATED
-                    zout.writestr(ni, data)
-            os.replace(out + ".tmp", out)
+        entries = [i for i in zin.infolist() if i.filename.startswith("assets/") and not i.is_dir()]
+        deflated = sum(1 for i in entries if i.compress_type != zipfile.ZIP_STORED)
+        print("assets.apk: %d asset entries (%d were compressed, now stored)" % (len(entries), deflated))
+        with zipfile.ZipFile(out + ".tmp", "w") as zout:
+            for i in entries:
+                ni = zipfile.ZipInfo(i.filename, date_time=i.date_time)
+                ni.external_attr = i.external_attr
+                ni.compress_type = zipfile.ZIP_STORED
+                zout.writestr(ni, zin.read(i))
+        os.replace(out + ".tmp", out)
     print("wrote %s/libgame.so and %s" % (args.portdir, out))
     return 0
 
@@ -740,7 +734,7 @@ def main(argv=None):
     s = sub.add_parser("inspect"); s.add_argument("input"); s.add_argument("--json"); s.set_defaults(fn=cmd_inspect)
     s = sub.add_parser("symbols"); s.add_argument("input"); s.add_argument("--grep"); s.add_argument("--out"); s.set_defaults(fn=cmd_symbols)
     s = sub.add_parser("assets"); s.add_argument("apk"); s.add_argument("--list", action="store_true"); s.add_argument("--extract"); s.set_defaults(fn=cmd_assets)
-    s = sub.add_parser("prepare"); s.add_argument("apk"); s.add_argument("portdir"); s.add_argument("--force-repack", action="store_true", help="always rewrite assets.apk with assets stored"); s.set_defaults(fn=cmd_prepare)
+    s = sub.add_parser("prepare"); s.add_argument("apk"); s.add_argument("portdir"); s.set_defaults(fn=cmd_prepare)
     s = sub.add_parser("modgen"); s.add_argument("input"); s.add_argument("--grep", required=True); s.add_argument("--out"); s.set_defaults(fn=cmd_modgen)
     args = p.parse_args(argv)
     return args.fn(args)

@@ -61,8 +61,22 @@ Inotia3-wasm(2026-10)은 이노티아 3의 `libgame.so`를 **명령어 단위로
 - `scripts/*` 파이프라인 전체를 빈 디렉터리에서 실행.
 - `inotia_tool.py`의 inspect/symbols/modgen/prepare (합성 APK).
 
-**검증 안 됨** (APK·실기 부재):
-- 실제 `libgame.so`로 부팅·메뉴·플레이. (Inotia3-wasm은 PC Mesa에서 플레이까지 확인했고,
+검증됨 (사용자 APK 수령 후, 2026-10-28):
+- 제공된 APK의 `lib/armeabi/libgame.so`는 1,359,908 바이트, ARMv5TE/Thumb-1/VFPv2 soft-float,
+  JNI 수출 40개(래퍼 수명주기 10/10), 엔진이 이름으로 찾는 심볼 32개와 HUD 숨김용 `VP_Draw*` 9개
+  모두 존재, 프레임 주기 패치 지점(`APPINFO_Initialize`+0x4f: `movs r0,#0x42`) 일치 → 두 포트가
+  기준으로 삼은 v1.3.2 빌드와 동일. `armeabi-v7a` 쪽 라이브러리도 바이트 단위로 같음.
+- x86_64 인터프리터(헤드리스)로 실제 `libgame.so` 부팅: 안티탬퍼 우회, 데이터 12개 설치
+  (`i_character/i_effect/i_item/i_mapfeature/i_monster0-4.dat` …), 로더 34단계, 메뉴 진입,
+  스크립트 탭으로 새 게임 → 오프닝 → 첫 맵까지 `GAMESTATE 0→13→2`. 1,271 엔진 프레임 평균
+  1,607,197 명령(업스트림 기준선과 같은 프레임 수), 플레이 중 프레임 2.08M 명령 / 13.2 ms (157 MIPS).
+  미구현 임포트 호출 0건.
+- `prepare`가 만든 에셋 전용 `assets.apk`(553개 항목, 전부 STORED, dex·서명 제외)로도 동일하게 부팅.
+- aarch64 `inotia3.aarch64`를 qemu-user + Ubuntu arm64 sysroot에서 실행: 동적 링크·SDL 초기화·
+  드라이버 프로브까지 정상(GL 라이브러리가 없는 sysroot라 창 생성에서 종료, 예상된 결과).
+
+**검증 안 됨** (실기 부재):
+- TrimUI 실기에서의 화면 출력·입력·사운드. (Inotia3-wasm은 PC Mesa에서 플레이까지 확인했고,
   RK3566 실기는 "검증 전"이라 적음. TrimUI는 그보다 한 단계 더 미지.)
 - PowerVR + KMSDRM에서 SDL2 창 생성. TrimUI stock OS는 컴포지터가 없어 KMSDRM이 맞지만,
   PowerVR의 GBM 구현 유무는 실기에서 봐야 함. 실패 시 런처 로그의 `--vdprobe` 출력이
