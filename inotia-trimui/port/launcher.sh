@@ -20,7 +20,7 @@ DEBUG=${INOTIA_DEBUG:-${SPIKE_DEBUG:-}}
 
 # A zip unpacked by Windows' "Extract All" lands one level down.
 if [ ! -f "$PORTDIR/inotia3.aarch64" ]; then
-    for d in "$SELFDIR"/*/inotia3; do
+    for d in "$SELFDIR"/*/inotia3 "$SELFDIR/.ports/inotia3" "$SELFDIR/../.ports/inotia3"; do
         [ -f "$d/inotia3.aarch64" ] && PORTDIR=$d && break
     done
 fi
